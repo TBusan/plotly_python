@@ -303,6 +303,13 @@ class PlotlyScatterChart:
         Args:
             header_data: 头节点数据，格式为 {headOption: {}, headerData: []}
                 headOption: 头节点样式配置
+                    - markerSize: 标记大小
+                    - markerSymbol: 标记形状
+                    - markerColor: 标记颜色
+                    - markerLine: 标记边框配置
+                    - showLabels: 是否显示标签
+                    - smartLabels: 是否启用智能标签布局
+                    - maxLabels: 最大显示标签数量
                 headerData: 头节点数据，每个元素是 {x, y, v, num} 格式的字典
         
         Returns:
@@ -333,6 +340,29 @@ class PlotlyScatterChart:
         marker_line = head_option.get("markerLine", {"color": "white", "width": 2})
         show_labels = head_option.get("showLabels", True)
         
+        # 智能标签配置
+        smart_labels = head_option.get("smartLabels", False)
+        max_labels = head_option.get("maxLabels", 50)
+        
+        # 处理标签显示
+        text_values = num_values.copy()
+        text_positions = ['top center'] * len(num_values)
+        
+        # 如果启用智能标签布局且点数量超过最大标签数
+        if show_labels and smart_labels and len(header_data_points) > max_labels:
+            # 方法1: 只显示部分标签
+            step = max(1, round(len(header_data_points) / max_labels))
+            text_values = [str(num) if i % step == 0 else "" for i, num in enumerate(num_values)]
+            
+            # 方法2（可选）: 交错显示标签位置
+            # positions = ['top center', 'top right', 'top left', 'bottom center', 'bottom left', 'bottom right']
+            # text_positions = []
+            # for i in range(len(num_values)):
+            #     if text_values[i] == "":
+            #         text_positions.append('top center')  # 空标签位置无所谓
+            #     else:
+            #         text_positions.append(positions[i % len(positions)])
+        
         # 创建头节点图层
         header_trace = go.Scatter(
             x=x_values,
@@ -347,8 +377,8 @@ class PlotlyScatterChart:
                     width=marker_line.get("width", 2)
                 )
             ),
-            text=num_values if show_labels else None,
-            textposition='top center',
+            text=text_values if show_labels else None,
+            textposition=text_positions if len(text_positions) > 1 else 'top center',
             textfont=dict(
                 family='Arial',
                 size=12,
