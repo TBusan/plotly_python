@@ -27,6 +27,7 @@ class PlotlyScatterChart:
         self.hidden_points = set()  # 存储被隐藏的点
         self.point_ids = []  # 存储所有点的id
         self.extended_data = []  # 存储扩展属性
+        self.header_trace_index = None  # 存储头节点图层的索引
         
     def init(self, options=None):
         """初始化散点图
@@ -295,6 +296,97 @@ class PlotlyScatterChart:
         
         # 清空隐藏点集合
         self.hidden_points.clear()
+        
+    def addHeaderPoints(self, header_data):
+        """添加头节点
+        
+        Args:
+            header_data: 头节点数据，格式为 {headOption: {}, headerData: []}
+                headOption: 头节点样式配置
+                headerData: 头节点数据，每个元素是 {x, y, v, num} 格式的字典
+        
+        Returns:
+            int: 添加的头节点图层的索引
+        """
+        if not self.fig:
+            print("图表未初始化，无法添加头节点")
+            return -1
+            
+        # 获取头节点数据和样式配置
+        header_data_points = header_data.get("headerData", [])
+        head_option = header_data.get("headOption", {})
+        
+        if not header_data_points:
+            print("头节点数据为空")
+            return -1
+        
+        # 提取数据
+        x_values = [point.get("x") for point in header_data_points]
+        y_values = [point.get("y") for point in header_data_points]
+        v_values = [point.get("v") for point in header_data_points]
+        num_values = [point.get("num") for point in header_data_points]
+        
+        # 获取样式配置
+        marker_size = head_option.get("markerSize", 16)
+        marker_symbol = head_option.get("markerSymbol", "diamond")
+        marker_color = head_option.get("markerColor", "blue")
+        marker_line = head_option.get("markerLine", {"color": "white", "width": 2})
+        show_labels = head_option.get("showLabels", True)
+        
+        # 创建头节点图层
+        header_trace = go.Scatter(
+            x=x_values,
+            y=y_values,
+            mode='markers+text' if show_labels else 'markers',
+            marker=dict(
+                size=marker_size,
+                color=marker_color,
+                symbol=marker_symbol,
+                line=dict(
+                    color=marker_line.get("color", "white"),
+                    width=marker_line.get("width", 2)
+                )
+            ),
+            text=num_values if show_labels else None,
+            textposition='top center',
+            textfont=dict(
+                family='Arial',
+                size=12,
+                color='black'
+            ),
+            hovertemplate=(
+                "X: %{x}<br>"
+                "Y: %{y}<br>"
+                "Num: %{text}<br>"
+                "<extra></extra>"
+            ),
+            customdata=num_values,
+            name='Header Points',
+            showlegend=False
+        )
+        
+        # 添加头节点图层
+        self.fig.add_trace(header_trace)
+        
+        # 保存头节点图层索引
+        self.header_trace_index = len(self.fig.data) - 1
+        
+        print(f"添加了 {len(header_data_points)} 个头节点")
+        
+        return self.header_trace_index
+    
+    def removeHeaderPoints(self):
+        """移除头节点图层"""
+        if not self.fig or self.header_trace_index is None:
+            return
+        
+        # 删除头节点图层
+        self.fig.data = [trace for i, trace in enumerate(self.fig.data) if i != self.header_trace_index]
+        
+        # 重置头节点图层索引
+        self.header_trace_index = None
+        
+        print("头节点图层已移除")
 
 # 使用示例
 def load_plot_data(data_file):
@@ -331,6 +423,25 @@ def load_color_scale(color_scale_file):
     except Exception as e:
         print(f"载入颜色刻度时出错: {e}")
         return []
+
+def load_header_data(header_data_file):
+    """载入头节点数据
+    
+    Args:
+        header_data_file: 头节点数据文件路径
+    
+    Returns:
+        dict: 头节点数据和配置
+    """
+    try:
+        with open(header_data_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            header_data = data.get("headerData", [])
+            print(f"成功加载 {header_data_file}，包含 {len(header_data)} 个头节点")
+            return data
+    except Exception as e:
+        print(f"载入头节点数据时出错: {e}")
+        return {}
 
 if __name__ == "__main__":
     # 载入数据和颜色刻度
