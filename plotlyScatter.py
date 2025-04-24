@@ -36,6 +36,7 @@ class PlotlyScatterChart:
                 - data: 数据对象 {x: [], y: [], v: [], visible: [], id: []}
                 - style: 样式配置
                 - layout: 布局配置
+                - yaxis_reversed: 是否反转Y轴，默认为True
         """
         if options is None:
             options = {}
@@ -43,6 +44,7 @@ class PlotlyScatterChart:
         data = options.get("data", {})
         style = options.get("style", {})
         layout = options.get("layout", {})
+        yaxis_reversed = options.get("yaxis_reversed", True)  # 默认反转Y轴
         
         # 保存点的id和扩展属性
         self.point_ids = data.get("id", [])
@@ -123,7 +125,7 @@ class PlotlyScatterChart:
                 "title": layout.get("yAxisTitle", ""),  # 这里使用layout中的yAxisTitle作为yaxis.title
                 "showgrid": True,
                 "zeroline": True,
-                "autorange": "reversed",
+                "autorange": "reversed" if yaxis_reversed else True,  # 根据配置设置Y轴是否反转
                 "showline": True,
             },
             "margin": {"t": 50, "l": 50, "r": 50, "b": 50}
@@ -135,6 +137,12 @@ class PlotlyScatterChart:
             del layout_copy["xAxisTitle"]
         if "yAxisTitle" in layout_copy:
             del layout_copy["yAxisTitle"]
+        
+        # 检查是否有明确的Y轴配置
+        if "yaxis" in layout_copy:
+            # 如果没有自定义autorange，添加我们的设置
+            if "autorange" not in layout_copy["yaxis"]:
+                layout_copy["yaxis"]["autorange"] = "reversed" if yaxis_reversed else True
         
         # 更新其他有效的布局属性
         self.layout.update(layout_copy)
@@ -172,6 +180,20 @@ class PlotlyScatterChart:
             return
             
         self.fig.update_layout(**new_layout)
+    
+    def flip_y_axis(self, reversed=True):
+        """翻转Y轴
+        
+        Args:
+            reversed: 是否反转Y轴，True表示反转，False表示正常方向
+        """
+        if not self.fig:
+            return
+        
+        self.fig.update_layout(
+            yaxis_autorange="reversed" if reversed else True
+        )
+        print(f"Y轴方向已{'反转' if reversed else '恢复正常'}")
     
     def save_figure(self, filename, format="png"):
         """保存图表为图片
@@ -330,7 +352,8 @@ if __name__ == "__main__":
             "title": "Scatter Plot Demo",
             "xaxis": {"title": "X Axis"},  # 正确的Python plotly轴标题设置
             "yaxis": {"title": "Y Axis"}   # 正确的Python plotly轴标题设置
-        }
+        },
+        "yaxis_reversed": True  # 设置Y轴是否翻转，默认为True
     })
     
     # 显示图表（交互式）
