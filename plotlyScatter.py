@@ -61,14 +61,18 @@ class PlotlyScatterChart:
                     "pseu": data.get("pseu", [])[i] if i < len(data.get("pseu", [])) else None
                 })
         
-        # 根据visible数组初始化点的不透明度
+        # 根据visible数组初始化点的不透明度（0=显示，1=隐藏）
         visible_data = data.get("visible", [])
+        # 修改逻辑：1表示隐藏（不透明度为0），0表示显示（不透明度为1）
         opacities = [0 if v == 1 else 1 for v in visible_data]
         
         # 初始化隐藏点集合
+        self.hidden_points.clear()  # 先清空集合
         for i, v in enumerate(visible_data):
-            if v == 1:
+            if v == 1:  # 1表示隐藏
                 self.hidden_points.add(i)
+        
+        print(f"初始隐藏点数量: {len(self.hidden_points)}")
         
         # 处理颜色刻度
         color_scale = style.get("colorscale", None)
@@ -88,7 +92,7 @@ class PlotlyScatterChart:
                     color=["white"] * len(data.get("x", [])),
                     width=[1] * len(data.get("x", []))
                 ),
-                showscale=False
+                showscale=False  # 将showscale移到marker中
             ),
             hovertemplate=(
                 "X: %{x}<br>"
@@ -108,7 +112,7 @@ class PlotlyScatterChart:
             "hovermode": "closest",
             "dragmode": "pan",
             "xaxis": {
-                "title": layout.get("xAxisTitle", ""),
+                "title": layout.get("xAxisTitle", ""),  # 这里使用layout中的xAxisTitle作为xaxis.title
                 "showgrid": True,
                 "zeroline": True,
                 "autorange": True,
@@ -116,7 +120,7 @@ class PlotlyScatterChart:
                 "side": "top",
             },
             "yaxis": {
-                "title": layout.get("yAxisTitle", ""),
+                "title": layout.get("yAxisTitle", ""),  # 这里使用layout中的yAxisTitle作为yaxis.title
                 "showgrid": True,
                 "zeroline": True,
                 "autorange": "reversed",
@@ -125,8 +129,15 @@ class PlotlyScatterChart:
             "margin": {"t": 50, "l": 50, "r": 50, "b": 50}
         }
         
-        # 更新自定义布局
-        self.layout.update(layout)
+        # 更新自定义布局，但需要移除xAxisTitle和yAxisTitle，它们不是有效的Layout属性
+        layout_copy = layout.copy()
+        if "xAxisTitle" in layout_copy:
+            del layout_copy["xAxisTitle"]
+        if "yAxisTitle" in layout_copy:
+            del layout_copy["yAxisTitle"]
+        
+        # 更新其他有效的布局属性
+        self.layout.update(layout_copy)
         
         # 创建图表
         self.fig = go.Figure(data=[scatter_trace], layout=self.layout)
@@ -275,7 +286,9 @@ def load_plot_data(data_file):
     """
     try:
         with open(data_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            data = json.load(f)
+            print(f"成功加载 {data_file}，包含数据点: {len(data.get('x', []))}")
+            return data
     except Exception as e:
         print(f"载入数据时出错: {e}")
         return {}
@@ -315,8 +328,8 @@ if __name__ == "__main__":
         },
         "layout": {
             "title": "Scatter Plot Demo",
-            "xaxis": {"title": "X Axis"},
-            "yaxis": {"title": "Y Axis"}
+            "xaxis": {"title": "X Axis"},  # 正确的Python plotly轴标题设置
+            "yaxis": {"title": "Y Axis"}   # 正确的Python plotly轴标题设置
         }
     })
     
