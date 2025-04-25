@@ -235,6 +235,29 @@ class PlotlyContourChart:
         # 如果线型在映射字典中，返回映射值，否则返回默认值"solid"
         return line_map.get(line_type, "solid")
     
+    def _map_pattern(self, pattern):
+        """将JSON中的填充模式映射到Plotly支持的模式
+        
+        Args:
+            pattern: 输入的填充模式字符串
+            
+        Returns:
+            str: Plotly支持的填充模式
+        """
+        # 定义填充模式映射关系
+        pattern_map = {
+            "/": "/",         # 右斜线
+            "-": "-",         # 水平线
+            "|": "|",         # 垂直线
+            "+": "+",         # 正交网格
+            ".": ".",         # 圆点阵列
+            "x": "x",         # 交叉线
+            "": None          # 空字符串代表纯颜色填充
+        }
+        
+        # 如果模式在映射字典中，返回映射值，否则返回None（纯颜色填充）
+        return pattern_map.get(pattern, None)
+    
     def initShape(self, shapeData):
         """初始化形状，添加点、线、多边形或文本到图表
         
@@ -361,7 +384,8 @@ class PlotlyContourChart:
             # 设置标记点样式
             marker_style = style.get("marker", {})
             
-            polygon_trace = go.Scatter(
+            # 基本属性
+            polygon_attrs = dict(
                 x=x_coords,
                 y=y_coords,
                 mode="lines+markers" + ("+text" if style.get("text", {}).get("show", False) else ""),
@@ -377,14 +401,38 @@ class PlotlyContourChart:
                     symbol=self._map_symbol(marker_style.get("symbol", "circle"))
                 ),
                 fill="toself",
-                fillcolor=fill_style.get("bgcolor", "#000000"),
-                opacity=fill_style.get("opacity", 1),
                 showlegend=False,
                 hoverinfo="text",
                 hovertext=name,
                 customdata=[shape_id],
                 name=name
             )
+            
+            # 处理填充样式
+            if fill_style.get("type") == "pattern":
+                # 获取模式
+                pattern_type = self._map_pattern(fill_style.get("pattern", ""))
+                
+                if pattern_type:
+                    # 使用图案填充
+                    polygon_attrs["fillpattern"] = dict(
+                        shape=pattern_type,
+                        bgcolor=fill_style.get("bgcolor", "#FFFFFF"),
+                        fgcolor=line_style.get("color", "#000000"),
+                        size=10  # 默认模式大小
+                    )
+                    polygon_attrs["opacity"] = 1  # 不透明度设为1，防止模式过淡
+                else:
+                    # 纯色填充
+                    polygon_attrs["fillcolor"] = fill_style.get("bgcolor", "#000000")
+                    polygon_attrs["opacity"] = fill_style.get("opacity", 1)
+            else:
+                # 默认纯色填充
+                polygon_attrs["fillcolor"] = fill_style.get("bgcolor", "#000000")
+                polygon_attrs["opacity"] = fill_style.get("opacity", 1)
+            
+            # 创建多边形
+            polygon_trace = go.Scatter(**polygon_attrs)
             
             # 如果需要显示文本，计算中心位置
             if style.get("text", {}).get("show", False):

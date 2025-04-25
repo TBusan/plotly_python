@@ -73,7 +73,7 @@
             }
         }
     },
-    "polygon":{
+    "polygon1":{
         "id": "1429964953272320",
         "type": "polygon",
         "name": "常规高密度电法-反演结果.dat-常规高密度电法",
@@ -137,7 +137,7 @@
             }
         }
     },
-    "polygon1":{
+    "polygon":{
         "id": "1429964966174720",
         "type": "polygon",
         "name": "反演结果.dat",
