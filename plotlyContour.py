@@ -189,6 +189,260 @@ class PlotlyContourChart:
             "zmax": trace.zmax if hasattr(trace, "zmax") else None
         }
     
+    def _map_symbol(self, symbol):
+        """将JSON中的symbol映射到Plotly支持的marker symbol
+        
+        Args:
+            symbol: 输入的symbol字符串
+            
+        Returns:
+            str: Plotly支持的symbol值
+        """
+        # 定义symbol映射关系
+        symbol_map = {
+            "solid": "circle",
+            "circle": "circle",
+            "square": "square",
+            "diamond": "diamond",
+            "cross": "cross",
+            "x": "x",
+            "triangle": "triangle-up",
+            "pentagon": "pentagon",
+            "hexagon": "hexagon",
+            "star": "star"
+        }
+        
+        # 如果symbol在映射字典中，返回映射值，否则返回默认值"circle"
+        return symbol_map.get(symbol, "circle")
+    
+    def _map_line_type(self, line_type):
+        """将JSON中的线型映射到Plotly支持的线型
+        
+        Args:
+            line_type: 输入的线型字符串
+            
+        Returns:
+            str: Plotly支持的线型
+        """
+        # 定义线型映射关系
+        line_map = {
+            "solid": "solid",
+            "dash": "dash",
+            "dot": "dot",
+            "dashdot": "dashdot"
+        }
+        
+        # 如果线型在映射字典中，返回映射值，否则返回默认值"solid"
+        return line_map.get(line_type, "solid")
+    
+    def initShape(self, shapeData):
+        """初始化形状，添加点、线、多边形或文本到图表
+        
+        Args:
+            shapeData: 形状数据，包含id、type、name、points和style等属性
+            
+        Returns:
+            str: 成功返回形状的id，失败返回None
+        """
+        if not self.fig:
+            print("图表未初始化，无法添加形状")
+            return None
+            
+        if not isinstance(shapeData, dict) or "type" not in shapeData:
+            print("形状数据格式不正确")
+            return None
+            
+        shape_type = shapeData.get("type")
+        shape_id = shapeData.get("id")
+        points = shapeData.get("points", [])
+        style = shapeData.get("style", {})
+        name = shapeData.get("name", "")
+        
+        if not points:
+            print("形状点数据为空")
+            return None
+            
+        # 提取所有点的x和y坐标
+        x_coords = [point.get("x") for point in points if "x" in point]
+        y_coords = [point.get("y") for point in points if "y" in point]
+        
+        # 根据不同形状类型创建不同的Plotly图形
+        if shape_type == "point":
+            # 点形状包含点和文本两部分的样式
+            point_trace = go.Scatter(
+                x=x_coords,
+                y=y_coords,
+                mode="markers+text" if style.get("text", {}).get("show", False) else "markers",
+                marker=dict(
+                    color=style.get("color", "#000000"),
+                    size=style.get("size", 8),
+                    opacity=style.get("opacity", 100) / 100,
+                    symbol=self._map_symbol(style.get("symbol", "circle"))
+                ),
+                text=style.get("text", {}).get("content", name) if style.get("text", {}).get("show", False) else None,
+                textposition="top center",
+                textfont=dict(
+                    family=style.get("text", {}).get("fontFamily", "Arial"),
+                    size=style.get("text", {}).get("size", 12),
+                    color=style.get("text", {}).get("color", "#000000")
+                ),
+                showlegend=False,
+                hoverinfo="text",
+                hovertext=name,
+                customdata=[shape_id],
+                name=name
+            )
+            self.fig.add_trace(point_trace)
+            
+        elif shape_type == "polyline":
+            # 线形状包含折点、线和文本三部分的样式
+            # 创建线形状
+            line_trace = go.Scatter(
+                x=x_coords,
+                y=y_coords,
+                mode="lines+markers" + ("+text" if style.get("text", {}).get("show", False) else ""),
+                line=dict(
+                    color=style.get("color", "#000000"),
+                    width=style.get("width", 1),
+                    dash=self._map_line_type(style.get("type", "solid"))
+                ),
+                marker=dict(
+                    color=style.get("marker", {}).get("color", "#000000"),
+                    size=style.get("marker", {}).get("size", 8),
+                    opacity=style.get("marker", {}).get("opacity", 1),
+                    symbol=self._map_symbol(style.get("marker", {}).get("symbol", "circle"))
+                ),
+                showlegend=False,
+                hoverinfo="text",
+                hovertext=name,
+                customdata=[shape_id],
+                name=name
+            )
+            
+            # 如果需要显示文本，计算中心位置
+            if style.get("text", {}).get("show", False):
+                # 计算中心位置
+                center_x = sum(x_coords) / len(x_coords)
+                center_y = sum(y_coords) / len(y_coords)
+                
+                # 添加文本
+                text_trace = go.Scatter(
+                    x=[center_x],
+                    y=[center_y],
+                    mode="text",
+                    text=[style.get("text", {}).get("content", name)],
+                    textposition="middle center",
+                    textfont=dict(
+                        family=style.get("text", {}).get("fontFamily", "Arial"),
+                        size=style.get("text", {}).get("size", 12),
+                        color=style.get("text", {}).get("color", "#000000")
+                    ),
+                    showlegend=False,
+                    hoverinfo="none",
+                    customdata=[f"{shape_id}_text"],
+                    name=f"{name}_text"
+                )
+                self.fig.add_trace(line_trace)
+                self.fig.add_trace(text_trace)
+            else:
+                self.fig.add_trace(line_trace)
+            
+        elif shape_type == "polygon":
+            # 多边形形状包含折点、线、面和文本四部分的样式
+            # 闭合多边形
+            if x_coords[0] != x_coords[-1] or y_coords[0] != y_coords[-1]:
+                x_coords.append(x_coords[0])
+                y_coords.append(y_coords[0])
+                
+            # 设置线条样式
+            line_style = style.get("lineStyle", {})
+            # 设置填充样式
+            fill_style = style.get("fillStyle", {})
+            # 设置标记点样式
+            marker_style = style.get("marker", {})
+            
+            polygon_trace = go.Scatter(
+                x=x_coords,
+                y=y_coords,
+                mode="lines+markers" + ("+text" if style.get("text", {}).get("show", False) else ""),
+                line=dict(
+                    color=line_style.get("color", "#000000"),
+                    width=line_style.get("width", 1),
+                    dash=self._map_line_type(line_style.get("type", "solid"))
+                ),
+                marker=dict(
+                    color=marker_style.get("color", "#000000"),
+                    size=marker_style.get("size", 8),
+                    opacity=marker_style.get("opacity", 1),
+                    symbol=self._map_symbol(marker_style.get("symbol", "circle"))
+                ),
+                fill="toself",
+                fillcolor=fill_style.get("bgcolor", "#000000"),
+                opacity=fill_style.get("opacity", 1),
+                showlegend=False,
+                hoverinfo="text",
+                hovertext=name,
+                customdata=[shape_id],
+                name=name
+            )
+            
+            # 如果需要显示文本，计算中心位置
+            if style.get("text", {}).get("show", False):
+                # 计算中心位置（多边形质心）
+                sum_x = sum(x_coords[:-1])  # 排除闭合点
+                sum_y = sum(y_coords[:-1])
+                center_x = sum_x / (len(x_coords) - 1)
+                center_y = sum_y / (len(y_coords) - 1)
+                
+                # 添加文本
+                text_trace = go.Scatter(
+                    x=[center_x],
+                    y=[center_y],
+                    mode="text",
+                    text=[style.get("text", {}).get("content", name)],
+                    textposition="middle center",
+                    textfont=dict(
+                        family=style.get("text", {}).get("fontFamily", "Arial"),
+                        size=style.get("text", {}).get("size", 12),
+                        color=style.get("text", {}).get("color", "#000000")
+                    ),
+                    showlegend=False,
+                    hoverinfo="none",
+                    customdata=[f"{shape_id}_text"],
+                    name=f"{name}_text"
+                )
+                self.fig.add_trace(polygon_trace)
+                self.fig.add_trace(text_trace)
+            else:
+                self.fig.add_trace(polygon_trace)
+            
+        elif shape_type == "text":
+            # 文本形状只有文本样式
+            text_trace = go.Scatter(
+                x=x_coords,
+                y=y_coords,
+                mode="text",
+                text=[style.get("text", name)],
+                textposition="middle center",
+                textfont=dict(
+                    family=style.get("font", "Arial"),
+                    size=style.get("size", 12),
+                    color=style.get("color", "#000000")
+                ),
+                showlegend=False,
+                hoverinfo="text",
+                hovertext=name,
+                customdata=[shape_id],
+                name=name
+            )
+            self.fig.add_trace(text_trace)
+            
+        else:
+            print(f"不支持的形状类型: {shape_type}")
+            return None
+        
+        return shape_id
+        
     def show(self):
         """显示图表"""
         if not self.fig:
@@ -327,5 +581,38 @@ if __name__ == "__main__":
     
     # 也可以保存为HTML（交互式）
     contour_chart.save_as_html("contour_plot.html")
+    
+    # 尝试添加形状
+    print("\n添加形状示例...")
+    try:
+        # 加载形状数据
+        with open("plotlyContourShape.json", 'r', encoding='utf-8') as f:
+            shape_data = json.load(f)
+            
+        # 添加点
+        if "point" in shape_data:
+            point_id = contour_chart.initShape(shape_data["point"])
+            print(f"添加点形状成功，ID: {point_id}")
+            
+        # 添加线
+        if "polyline" in shape_data:
+            line_id = contour_chart.initShape(shape_data["polyline"])
+            print(f"添加线形状成功，ID: {line_id}")
+            
+        # 添加多边形
+        if "polygon" in shape_data:
+            polygon_id = contour_chart.initShape(shape_data["polygon"])
+            print(f"添加多边形形状成功，ID: {polygon_id}")
+            
+        # 添加文本
+        if "text" in shape_data:
+            text_id = contour_chart.initShape(shape_data["text"])
+            print(f"添加文本形状成功，ID: {text_id}")
+            
+        # 保存带有形状的图表
+        contour_chart.save_figure("contour_plot_with_shapes.png")
+        contour_chart.save_as_html("contour_plot_with_shapes.html")
+    except Exception as e:
+        print(f"添加形状时出错: {e}")
     
     print("操作完成！")
