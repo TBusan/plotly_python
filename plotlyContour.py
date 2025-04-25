@@ -55,6 +55,7 @@ class PlotlyContourChart:
             zmin=data.get("zmin"),  # 最小值
             zmax=data.get("zmax"),  # 最大值
             colorscale=style.get("colorscale", None),  # 色阶
+            showscale=style.get("showscale", False),  # 是否显示颜色条
             contours=dict(
                 showlines=style.get("showlines", True),  # 是否显示等值线
                 showlabels=style.get("showLabels", False),  # 是否显示标签
@@ -294,11 +295,12 @@ if __name__ == "__main__":
     style_config = {
         "colorscale": color_scale,
         "showlines": True,  # 显示等值线
-        "lineColor": "#19AC4A",  # 等值线颜色
+        "lineColor": "#1F2220",  # 等值线颜色
         "lineStyle": "solid",  # 等值线样式
         "showLabels": True,  # 显示标签
-        "labelColor": "#19AC4A",  # 标签颜色
-        "labelSize": 12  # 标签大小
+        "labelColor": "#1F2220",  # 标签颜色
+        "labelSize": 12,  # 标签大小
+        "showscale": False  # 不显示颜色条
     }
     
     # 创建等值线图实例

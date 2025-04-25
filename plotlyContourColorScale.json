@@ -1,9 +1,9 @@
 {
     "showLabels": true,
-    "labelColor" :"#19AC4A",
+    "labelColor" :"#1F2220",
     "labelSize": 12,
     "showlines": true,
-    "lineColor": "#19AC4A",
+    "lineColor": "#1F2220",
     "lineStyle" : "solid",
     "colorScale":[
         [
