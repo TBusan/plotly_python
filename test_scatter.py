@@ -39,10 +39,10 @@ def main():
             "title": "数据可视化",
             "xaxis": {"title": "X 轴"},
             "yaxis": {"title": "Y 轴"},
-            "width": 1000,
-            "height": 800,
+            "width": 1200,
+            "height": 600,
             "plot_bgcolor": "white",
-            "margin": {"t": 50, "l": 50, "r": 150, "b": 50}
+            "margin": {"t": 50, "l": 50, "r": 200, "b": 50}
         }
     })
     
@@ -88,9 +88,12 @@ def main():
         color_stops,
         title="自定义颜色条",
         auto_position=True,
-        use_paper_coords=True,  # 使用纸面坐标系统
-        font_size=14,
-        title_font_size=16
+        use_paper_coords=True,
+        width=0.035,
+        font_size=12,
+        title_font_size=14,
+        tick_length=0.015,
+        tick_text_offset=0.01
     )
     
     # 8. 显示图表（交互式）

@@ -20,7 +20,7 @@ class CustomColorBar:
         title_offset: float = 0.07,
         tick_length: float = 0.02,
         tick_text_offset: float = 0.03,
-        tick_width: float = 2,
+        tick_width: float = 0.1,
         font_size: int = 14,
         font_color: str = "black",
         title_font_size: int = 16,
@@ -89,9 +89,9 @@ class CustomColorBar:
         """
         # 确保图表有足够的右边距
         if 'margin' not in fig.layout:
-            fig.update_layout(margin=dict(r=150))
-        elif hasattr(fig.layout.margin, 'r') and fig.layout.margin.r < 150:
-            margin = dict(r=150)
+            fig.update_layout(margin=dict(r=200))  # 增加右边距
+        elif hasattr(fig.layout.margin, 'r') and fig.layout.margin.r < 200:  # 增加最小边距
+            margin = dict(r=200)
             if hasattr(fig.layout.margin, 't'):
                 margin['t'] = fig.layout.margin.t
             if hasattr(fig.layout.margin, 'l'):
@@ -216,7 +216,7 @@ class CustomColorBar:
             y0=self.y_position[0],
             x1=self.x_position + self.width,
             y1=self.y_position[1],
-            line=dict(color="black", width=1),
+            line=dict(color="black", width=0),
             fillcolor="rgba(0,0,0,0)",
             layer="above"
         )
@@ -227,28 +227,28 @@ class CustomColorBar:
             y_norm = (value - self.min_value) / self.value_range
             y_pos = self.y_position[0] + y_norm * self.y_height
             
-            # 添加刻度线
+            # 添加刻度线 - 移到右侧
             fig.add_shape(
                 type="line",
                 xref="paper",
                 yref="paper",
-                x0=self.x_position,
+                x0=self.x_position + self.width,  # 从颜色条右边缘开始
                 y0=y_pos,
-                x1=self.x_position - self.tick_length,
+                x1=self.x_position + self.width + self.tick_length,  # 向右延伸
                 y1=y_pos,
                 line=dict(color="black", width=self.tick_width),
                 layer="above"
             )
             
-            # 添加刻度文本
+            # 添加刻度文本 - 移到右侧
             fig.add_annotation(
                 xref="paper",
                 yref="paper",
-                x=self.x_position - self.tick_length - self.tick_text_offset,
+                x=self.x_position + self.width + self.tick_length + self.tick_text_offset,  # 位于刻度线右侧
                 y=y_pos,
                 text=str(value),
                 showarrow=False,
-                xanchor="right",
+                xanchor="left",  # 文本左对齐
                 yanchor="middle",
                 font=dict(size=self.font_size, color=self.font_color)
             )
@@ -308,24 +308,24 @@ class CustomColorBar:
         for value, color in self.color_stops:
             y_pos = self._value_to_y_position(value)
             
-            # 添加刻度线
+            # 添加刻度线 - 移到右侧
             fig.add_shape(
                 type="line",
-                x0=self.x_position,
+                x0=self.x_position + self.width,  # 从颜色条右边缘开始
                 y0=y_pos,
-                x1=self.x_position - self.tick_length,
+                x1=self.x_position + self.width + self.tick_length,  # 向右延伸
                 y1=y_pos,
                 line=dict(color="black", width=self.tick_width),
                 layer="above"
             )
             
-            # 添加刻度文本
+            # 添加刻度文本 - 移到右侧
             fig.add_annotation(
-                x=self.x_position - self.tick_length - self.tick_text_offset,
+                x=self.x_position + self.width + self.tick_length + self.tick_text_offset,  # 位于刻度线右侧
                 y=y_pos,
                 text=str(value),
                 showarrow=False,
-                xanchor="right",
+                xanchor="left",  # 文本左对齐
                 yanchor="middle",
                 font=dict(size=self.font_size, color=self.font_color)
             )
@@ -680,7 +680,7 @@ class PlotlyScatterChart:
         marker_size = head_option.get("markerSize", 16)
         marker_symbol = head_option.get("markerSymbol", "diamond")
         marker_color = head_option.get("markerColor", "blue")
-        marker_line = head_option.get("markerLine", {"color": "white", "width": 2})
+        marker_line = head_option.get("markerLine", {"color": "white", "width": 1})
         show_labels = head_option.get("showLabels", True)
         
         # 智能标签配置
