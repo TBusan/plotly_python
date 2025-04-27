@@ -886,7 +886,7 @@ class PlotlyContourChart:
                 filename,
                 format=format,
                 engine="kaleido",
-                width=800,
+                width=1200,
                 height=600
             )
             print(f"成功保存图表到 {filename}")

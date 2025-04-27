@@ -125,7 +125,40 @@ def test_shapes():
 def test_custom_colorbar():
     """测试自定义颜色条功能"""
     # 先创建一个基本的等值线图
-    contour_chart = test_contour_plot()
+    contour_data = load_contour_data("plotlyContourData.json")
+    color_scale = load_color_scale("plotlyContourColorScale.json")
+    
+    # 创建其他样式配置
+    style_config = {
+        "colorscale": color_scale,
+        "showlines": True,  # 显示等值线
+        "lineColor": "#1F2220",  # 等值线颜色
+        "lineStyle": "solid",  # 等值线样式
+        "showLabels": True,  # 显示标签
+        "labelColor": "#1F2220",  # 标签颜色
+        "labelSize": 12,  # 标签大小
+        "showscale": False  # 不显示颜色条
+    }
+    
+    # 创建等值线图实例
+    contour_chart = PlotlyContourChart()
+    
+    # 初始化等值线图
+    contour_chart.init({
+        "data": contour_data,
+        "style": style_config,
+        "layout": {
+            "title": "等值线图示例",
+            "xAxisTitle": "X轴",
+            "yAxisTitle": "Y轴",
+            "width": 1200,
+            "height": 600,  # 增加高度以便更好地显示
+            "margin": {"t": 50, "l": 50, "r": 200, "b": 50}  # 增加右侧边距以容纳颜色条
+        }
+    })
+    
+    # 显示图表（交互式）
+ 
     
     # 添加自定义颜色条
     print("\n添加自定义颜色条...")
@@ -155,6 +188,7 @@ def test_custom_colorbar():
             title_font_size=14
         )
         
+        contour_chart.show()
         # 保存带有自定义颜色条的图表
         contour_chart.save_figure("contour_plot_with_colorbar.png")
         contour_chart.save_as_html("contour_plot_with_colorbar.html")
