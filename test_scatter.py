@@ -41,7 +41,8 @@ def main():
             "yaxis": {"title": "Y 轴"},
             "width": 1000,
             "height": 800,
-            "plot_bgcolor": "white"
+            "plot_bgcolor": "white",
+            "margin": {"t": 50, "l": 50, "r": 100, "b": 50}
         }
     })
     
@@ -52,13 +53,28 @@ def main():
     else:
         print(f"成功添加头节点，图层索引: {trace_index}")
     
-    # 7. 显示图表（交互式）
+    # 7. 添加自定义颜色条
+    color_stops = [[10, 'red'], [50, 'green'], [100, 'blue']]
+    scatter_chart.addCustomColorBar(
+        color_stops,
+        title="自定义颜色条",
+        x_position=1.05,
+        y_position=[0.2, 0.8],
+        width=0.04,
+        tick_length=0.02,
+        tick_text_offset=0.03,
+        font_size=14,
+        title_font_size=16,
+        title_offset=0.07
+    )
+    
+    # 8. 显示图表（交互式）
     scatter_chart.show()
     
-    # 8. 保存为PNG图片
+    # 9. 保存为PNG图片
     scatter_chart.save_figure("scatter_plot_with_headers.png")
     
-    # 9. 也可以保存为HTML（交互式）
+    # 10. 也可以保存为HTML（交互式）
     scatter_chart.save_as_html("scatter_plot_with_headers.html")
     
     print("操作完成！")

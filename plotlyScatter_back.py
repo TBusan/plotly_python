@@ -2,166 +2,6 @@ import json
 import plotly.graph_objects as go
 import os
 import plotly.io as pio
-from typing import List, Union
-
-class CustomColorBar:
-    """
-    使用add_shape方法创建自定义颜色条的类
-    颜色条的颜色与刻度完全与传入的数组一致，不进行归一化处理
-    """
-    
-    def __init__(
-        self,
-        color_stops: List[List[Union[int, float, str]]],
-        x_position: float = 1.05,
-        y_position: List[float] = [0.2, 0.8],
-        width: float = 0.04,
-        title: str = "颜色条",
-        title_offset: float = 0.07,
-        tick_length: float = 0.02,
-        tick_text_offset: float = 0.03,
-        tick_width: float = 1.5,
-        font_size: int = 14,
-        font_color: str = "black",
-        title_font_size: int = 16,
-        title_font_color: str = "black",
-    ):
-        """
-        初始化自定义颜色条
-        
-        参数:
-            color_stops: 颜色停止点列表，格式为 [[值1, '颜色1'], [值2, '颜色2'], ...]
-            x_position: 颜色条的x位置 (相对于绘图区域，1.0是右边界)
-            y_position: 颜色条的y范围 [底部, 顶部] (相对于绘图区域)
-            width: 颜色条的宽度
-            title: 颜色条的标题
-            title_offset: 标题距离颜色条的偏移量
-            tick_length: 刻度线的长度
-            tick_text_offset: 刻度文本的偏移量
-            tick_width: 刻度线的宽度
-            font_size: 刻度文本的字体大小
-            font_color: 刻度文本的颜色
-            title_font_size: 标题的字体大小
-            title_font_color: 标题的颜色
-        """
-        self.color_stops = sorted(color_stops, key=lambda x: x[0])
-        self.x_position = x_position
-        self.y_position = y_position
-        self.width = width
-        self.title = title
-        self.title_offset = title_offset
-        self.tick_length = tick_length
-        self.tick_text_offset = tick_text_offset
-        self.tick_width = tick_width
-        self.font_size = font_size
-        self.font_color = font_color
-        self.title_font_size = title_font_size
-        self.title_font_color = title_font_color
-        
-        # 提取值范围
-        self.min_value = self.color_stops[0][0]
-        self.max_value = self.color_stops[-1][0]
-        self.value_range = self.max_value - self.min_value
-        
-        # 计算颜色条的高度
-        self.y_height = self.y_position[1] - self.y_position[0]
-    
-    def _value_to_y_position(self, value: Union[int, float]) -> float:
-        """将值转换为y坐标位置"""
-        normalized = (value - self.min_value) / self.value_range
-        return self.y_position[0] + normalized * self.y_height
-    
-    def add_to_figure(self, fig: go.Figure) -> go.Figure:
-        """
-        将自定义颜色条添加到Plotly图形中
-        
-        参数:
-            fig: Plotly图形对象
-            
-        返回:
-            更新后的Plotly图形对象
-        """
-        # 确保图表有足够的右边距
-        if 'margin' not in fig.layout:
-            fig.update_layout(margin=dict(r=100))
-        elif fig.layout.margin.r < 100:
-            fig.update_layout(margin=dict(r=100))
-            
-        # 添加颜色条的矩形段
-        for i in range(len(self.color_stops) - 1):
-            current_stop = self.color_stops[i]
-            next_stop = self.color_stops[i + 1]
-            
-            current_value, current_color = current_stop
-            next_value, next_color = next_stop
-            
-            # 计算当前段的y坐标范围
-            y0 = self._value_to_y_position(current_value)
-            y1 = self._value_to_y_position(next_value)
-            
-            # 对于简单的颜色条，使用当前颜色
-            # 如果需要渐变效果，可以添加多个小矩形来模拟渐变
-            fig.add_shape(
-                type="rect",
-                x0=self.x_position,
-                y0=y0,
-                x1=self.x_position + self.width,
-                y1=y1,
-                line=dict(width=0),
-                fillcolor=current_color,
-                layer="above"
-            )
-        
-        # 添加颜色条边框
-        fig.add_shape(
-            type="rect",
-            x0=self.x_position,
-            y0=self.y_position[0],
-            x1=self.x_position + self.width,
-            y1=self.y_position[1],
-            line=dict(color="black", width=1),
-            fillcolor="rgba(0,0,0,0)",
-            layer="above"
-        )
-        
-        # 添加刻度线和标签
-        for value, color in self.color_stops:
-            y_pos = self._value_to_y_position(value)
-            
-            # 添加刻度线
-            fig.add_shape(
-                type="line",
-                x0=self.x_position,
-                y0=y_pos,
-                x1=self.x_position - self.tick_length,
-                y1=y_pos,
-                line=dict(color="black", width=self.tick_width),
-                layer="above"
-            )
-            
-            # 添加刻度文本
-            fig.add_annotation(
-                x=self.x_position - self.tick_length - self.tick_text_offset,
-                y=y_pos,
-                text=str(value),
-                showarrow=False,
-                xanchor="right",
-                yanchor="middle",
-                font=dict(size=self.font_size, color=self.font_color)
-            )
-        
-        # 添加颜色条标题
-        fig.add_annotation(
-            x=self.x_position + self.width / 2,
-            y=self.y_position[1] + self.title_offset,
-            text=self.title,
-            showarrow=False,
-            xanchor="center",
-            yanchor="bottom",
-            font=dict(size=self.title_font_size, color=self.title_font_color)
-        )
-        
-        return fig
 
 class PlotlyScatterChart:
     """Python版的散点图类，模仿plotlyScatter.js的功能"""
@@ -188,7 +28,6 @@ class PlotlyScatterChart:
         self.point_ids = []  # 存储所有点的id
         self.extended_data = []  # 存储扩展属性
         self.header_trace_index = None  # 存储头节点图层的索引
-        self.custom_colorbar = None  # 存储自定义颜色条
         
     def init(self, options=None):
         """初始化散点图
@@ -413,11 +252,7 @@ class PlotlyScatterChart:
             print("图表未初始化，无法显示")
             return
         
-        # Add custom colorbar if it exists
-        if self.custom_colorbar:
-            self.custom_colorbar.add_to_figure(self.fig)
-        
-        self.fig.show(config=self.config)
+        self.fig.show()
     
     def hide_selected_points(self):
         """隐藏选中的点"""
@@ -582,30 +417,6 @@ class PlotlyScatterChart:
         self.header_trace_index = None
         
         print("头节点图层已移除")
-
-    def addCustomColorBar(self, color_stops, **kwargs):
-        """添加自定义颜色条
-        
-        Args:
-            color_stops: 颜色停止点列表，格式为 [[值1, '颜色1'], [值2, '颜色2'], ...]
-            **kwargs: 其他传递给CustomColorBar的参数
-            
-        Returns:
-            CustomColorBar: 创建的自定义颜色条对象
-        """
-        if not self.fig:
-            print("图表未初始化，无法添加自定义颜色条")
-            return None
-            
-        # 创建自定义颜色条对象
-        self.custom_colorbar = CustomColorBar(color_stops, **kwargs)
-        
-        # 将颜色条添加到图表
-        self.custom_colorbar.add_to_figure(self.fig)
-        
-        print(f"已添加自定义颜色条，包含 {len(color_stops)} 个颜色停止点")
-        
-        return self.custom_colorbar
 
 # 使用示例
 def load_plot_data(data_file):
