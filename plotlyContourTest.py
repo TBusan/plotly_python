@@ -67,8 +67,9 @@ def test_contour_plot():
             "title": "等值线图示例",
             "xAxisTitle": "X轴",
             "yAxisTitle": "Y轴",
-            "width": 800,
-            "height": 200
+            "width": 1200,
+            "height": 600,  # 增加高度以便更好地显示
+            "margin": {"t": 50, "l": 50, "r": 200, "b": 50}  # 增加右侧边距以容纳颜色条
         }
     })
     
@@ -121,6 +122,46 @@ def test_shapes():
     except Exception as e:
         print(f"添加形状时出错: {e}")
 
+def test_custom_colorbar():
+    """测试自定义颜色条功能"""
+    # 先创建一个基本的等值线图
+    contour_chart = test_contour_plot()
+    
+    # 添加自定义颜色条
+    print("\n添加自定义颜色条...")
+    try:
+        # 定义颜色停止点
+        color_stops = [
+            [0, 'rgba(126,84,255,255)'],
+            [30, 'rgba(45,30,255,255)'],
+            [60, 'rgba(0,60,195,255)'],
+            [90, 'rgba(0,195,60,255)'],
+            [120, 'rgba(75,255,0,255)'],
+            [150, 'rgba(210,255,0,255)'],
+            [180, 'rgba(255,201,0,255)'],
+            [210, 'rgba(255,120,0,255)'],
+            [240, 'rgba(255,60,0,255)'],
+            [270, 'rgba(255,6,0,255)'],
+        ]
+        
+        # 添加自定义颜色条
+        contour_chart.addCustomColorBar(
+            color_stops,
+            title="数值范围",
+            auto_position=True,
+            use_paper_coords=True,
+            width=0.035,
+            font_size=12,
+            title_font_size=14
+        )
+        
+        # 保存带有自定义颜色条的图表
+        contour_chart.save_figure("contour_plot_with_colorbar.png")
+        contour_chart.save_as_html("contour_plot_with_colorbar.html")
+        print("成功添加自定义颜色条并保存图表")
+    except Exception as e:
+        print(f"添加自定义颜色条时出错: {e}")
+
 if __name__ == "__main__":
-    test_shapes()
+    test_custom_colorbar()  # 测试自定义颜色条
     print("操作完成！")

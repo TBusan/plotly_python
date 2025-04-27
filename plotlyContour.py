@@ -3,6 +3,344 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import os
 from datetime import datetime
+from typing import List, Union
+
+class CustomColorBar:
+    """
+    使用add_shape方法创建自定义颜色条的类
+    颜色条的颜色与刻度完全与传入的数组一致，不进行归一化处理
+    """
+    
+    def __init__(
+        self,
+        color_stops: List[List[Union[int, float, str]]],
+        x_position: float = 1.05,
+        y_position: List[float] = [0.1, 0.9],
+        width: float = 0.04,
+        title: str = "颜色条",
+        title_offset: float = 0.07,
+        tick_length: float = 0.02,
+        tick_text_offset: float = 0.03,
+        tick_width: float = 0.1,
+        font_size: int = 14,
+        font_color: str = "black",
+        title_font_size: int = 16,
+        title_font_color: str = "black",
+        auto_position: bool = True,  # 控制是否自动计算位置
+        use_paper_coords: bool = True  # 使用纸面坐标系统
+    ):
+        """
+        初始化自定义颜色条
+        
+        参数:
+            color_stops: 颜色停止点列表，格式为 [[值1, '颜色1'], [值2, '颜色2'], ...]
+            x_position: 颜色条的x位置 (相对于绘图区域，1.0是右边界)
+            y_position: 颜色条的y范围 [底部, 顶部] (相对于绘图区域)
+            width: 颜色条的宽度
+            title: 颜色条的标题
+            title_offset: 标题距离颜色条的偏移量
+            tick_length: 刻度线的长度
+            tick_text_offset: 刻度文本的偏移量
+            tick_width: 刻度线的宽度
+            font_size: 刻度文本的字体大小
+            font_color: 刻度文本的颜色
+            title_font_size: 标题的字体大小
+            title_font_color: 标题的颜色
+            auto_position: 是否自动计算颜色条位置
+            use_paper_coords: 是否使用纸面坐标系统
+        """
+        self.color_stops = sorted(color_stops, key=lambda x: x[0])
+        self.x_position = x_position
+        self.y_position = y_position
+        self.width = width
+        self.title = title
+        self.title_offset = title_offset
+        self.tick_length = tick_length
+        self.tick_text_offset = tick_text_offset
+        self.tick_width = tick_width
+        self.font_size = font_size
+        self.font_color = font_color
+        self.title_font_size = title_font_size
+        self.title_font_color = title_font_color
+        self.auto_position = auto_position
+        self.use_paper_coords = use_paper_coords  # 是否使用纸面坐标系统
+        
+        # 提取值范围
+        self.min_value = self.color_stops[0][0]
+        self.max_value = self.color_stops[-1][0]
+        self.value_range = self.max_value - self.min_value
+        
+        # 计算颜色条的高度
+        self.y_height = self.y_position[1] - self.y_position[0]
+    
+    def _value_to_y_position(self, value: Union[int, float]) -> float:
+        """将值转换为y坐标位置"""
+        normalized = (value - self.min_value) / self.value_range
+        return self.y_position[0] + normalized * self.y_height
+    
+    def add_to_figure(self, fig: go.Figure) -> go.Figure:
+        """
+        将自定义颜色条添加到Plotly图形中
+        
+        参数:
+            fig: Plotly图形对象
+            
+        返回:
+            更新后的Plotly图形对象
+        """
+        # 确保图表有足够的右边距
+        if 'margin' not in fig.layout:
+            fig.update_layout(margin=dict(r=200))  # 增加右边距
+        elif hasattr(fig.layout.margin, 'r') and fig.layout.margin.r < 200:  # 增加最小边距
+            margin = dict(r=200)
+            if hasattr(fig.layout.margin, 't'):
+                margin['t'] = fig.layout.margin.t
+            if hasattr(fig.layout.margin, 'l'):
+                margin['l'] = fig.layout.margin.l
+            if hasattr(fig.layout.margin, 'b'):
+                margin['b'] = fig.layout.margin.b
+            fig.update_layout(margin=margin)
+            
+        # 颜色条位置计算
+        try:
+            if self.auto_position:
+                if self.use_paper_coords:
+                    # 使用纸面坐标系统 (0-1范围，相对于整个图表区域)
+                    self.x_position = 1.05  # 图表右侧5%
+                    self.y_position = [0.1, 0.9]  # 从10%到90%高度
+                    self.width = 0.04
+                    self.tick_length = 0.02
+                    self.tick_text_offset = 0.03
+                    self.title_offset = 0.07
+                else:
+                    # 使用数据坐标系统，从实际数据点计算
+                    x_data = []
+                    y_data = []
+                    
+                    for trace in fig.data:
+                        if hasattr(trace, 'x') and trace.x is not None:
+                            x_data.extend([x for x in trace.x if x is not None])
+                        if hasattr(trace, 'y') and trace.y is not None:
+                            y_data.extend([y for y in trace.y if y is not None])
+                    
+                    # 如果有数据，计算范围
+                    if x_data and y_data:
+                        x_min = min(x_data)
+                        x_max = max(x_data)
+                        y_min = min(y_data)
+                        y_max = max(y_data)
+                        
+                        # 计算颜色条位置
+                        x_span = x_max - x_min
+                        y_span = y_max - y_min
+                        
+                        self.x_position = x_max + 0.05 * x_span
+                        self.width = 0.03 * x_span
+                        self.y_position = [y_min + 0.05 * y_span, y_max - 0.05 * y_span]
+                        
+                        # 调整其他参数
+                        self.tick_length = 0.015 * x_span
+                        self.tick_text_offset = 0.02 * x_span
+                        self.title_offset = 0.04 * x_span
+                    else:
+                        # 如果没有有效数据，回退到纸面坐标
+                        print("无法从数据中计算颜色条位置，将使用默认纸面坐标")
+                        self.use_paper_coords = True
+                        self.x_position = 1.05
+                        self.y_position = [0.1, 0.9]
+                        self.width = 0.04
+                        self.tick_length = 0.02
+                        self.tick_text_offset = 0.03
+                        self.title_offset = 0.07
+            
+            # 重新计算高度
+            self.y_height = self.y_position[1] - self.y_position[0]
+                
+        except Exception as e:
+            print(f"计算颜色条位置时出错: {e}，将使用默认位置")
+            # 回退到安全的默认值
+            self.use_paper_coords = True
+            self.x_position = 1.05
+            self.y_position = [0.1, 0.9]
+            self.width = 0.04
+            self.y_height = self.y_position[1] - self.y_position[0]
+            self.tick_length = 0.02
+            self.tick_text_offset = 0.03
+            self.title_offset = 0.07
+        
+        # 根据坐标系统选择不同的添加方式
+        if self.use_paper_coords:
+            self._add_to_figure_paper_coords(fig)
+        else:
+            self._add_to_figure_data_coords(fig)
+            
+        return fig
+        
+    def _add_to_figure_paper_coords(self, fig: go.Figure) -> None:
+        """使用纸面坐标系统添加颜色条"""
+        # 添加颜色条的矩形段
+        for i in range(len(self.color_stops) - 1):
+            current_stop = self.color_stops[i]
+            next_stop = self.color_stops[i + 1]
+            
+            current_value, current_color = current_stop
+            next_value, next_color = next_stop
+            
+            # 计算相对位置 (0-1范围)
+            y0_norm = (current_value - self.min_value) / self.value_range
+            y1_norm = (next_value - self.min_value) / self.value_range
+            
+            # 映射到指定的y位置范围
+            y0 = self.y_position[0] + y0_norm * self.y_height
+            y1 = self.y_position[0] + y1_norm * self.y_height
+            
+            # 添加矩形，使用paper坐标系统
+            fig.add_shape(
+                type="rect",
+                xref="paper",
+                yref="paper",
+                x0=self.x_position,
+                y0=y0,
+                x1=self.x_position + self.width,
+                y1=y1,
+                line=dict(width=0),
+                fillcolor=current_color,
+                layer="above"
+            )
+        
+        # 添加颜色条边框
+        fig.add_shape(
+            type="rect",
+            xref="paper",
+            yref="paper",
+            x0=self.x_position,
+            y0=self.y_position[0],
+            x1=self.x_position + self.width,
+            y1=self.y_position[1],
+            line=dict(color="black", width=0),
+            fillcolor="rgba(0,0,0,0)",
+            layer="above"
+        )
+        
+        # 添加刻度线和标签
+        for value, color in self.color_stops:
+            # 计算相对位置
+            y_norm = (value - self.min_value) / self.value_range
+            y_pos = self.y_position[0] + y_norm * self.y_height
+            
+            # 添加刻度线 - 移到右侧
+            fig.add_shape(
+                type="line",
+                xref="paper",
+                yref="paper",
+                x0=self.x_position + self.width,  # 从颜色条右边缘开始
+                y0=y_pos,
+                x1=self.x_position + self.width + self.tick_length,  # 向右延伸
+                y1=y_pos,
+                line=dict(color="black", width=self.tick_width),
+                layer="above"
+            )
+            
+            # 添加刻度文本 - 移到右侧
+            fig.add_annotation(
+                xref="paper",
+                yref="paper",
+                x=self.x_position + self.width + self.tick_length + self.tick_text_offset,  # 位于刻度线右侧
+                y=y_pos,
+                text=str(value),
+                showarrow=False,
+                xanchor="left",  # 文本左对齐
+                yanchor="middle",
+                font=dict(size=self.font_size, color=self.font_color)
+            )
+        
+        # 添加颜色条标题
+        fig.add_annotation(
+            xref="paper",
+            yref="paper",
+            x=self.x_position + self.width / 2,
+            y=self.y_position[1] + self.title_offset,
+            text=self.title,
+            showarrow=False,
+            xanchor="center",
+            yanchor="bottom",
+            font=dict(size=self.title_font_size, color=self.title_font_color)
+        )
+    
+    def _add_to_figure_data_coords(self, fig: go.Figure) -> None:
+        """使用数据坐标系统添加颜色条"""
+        # 添加颜色条的矩形段
+        for i in range(len(self.color_stops) - 1):
+            current_stop = self.color_stops[i]
+            next_stop = self.color_stops[i + 1]
+            
+            current_value, current_color = current_stop
+            next_value, next_color = next_stop
+            
+            # 计算当前段的y坐标范围
+            y0 = self._value_to_y_position(current_value)
+            y1 = self._value_to_y_position(next_value)
+            
+            # 添加矩形，使用数据坐标系统
+            fig.add_shape(
+                type="rect",
+                x0=self.x_position,
+                y0=y0,
+                x1=self.x_position + self.width,
+                y1=y1,
+                line=dict(width=0),
+                fillcolor=current_color,
+                layer="above"
+            )
+        
+        # 添加颜色条边框
+        fig.add_shape(
+            type="rect",
+            x0=self.x_position,
+            y0=self.y_position[0],
+            x1=self.x_position + self.width,
+            y1=self.y_position[1],
+            line=dict(color="black", width=0),
+            fillcolor="rgba(0,0,0,0)",
+            layer="above"
+        )
+        
+        # 添加刻度线和标签
+        for value, color in self.color_stops:
+            y_pos = self._value_to_y_position(value)
+            
+            # 添加刻度线 - 移到右侧
+            fig.add_shape(
+                type="line",
+                x0=self.x_position + self.width,  # 从颜色条右边缘开始
+                y0=y_pos,
+                x1=self.x_position + self.width + self.tick_length,  # 向右延伸
+                y1=y_pos,
+                line=dict(color="black", width=self.tick_width),
+                layer="above"
+            )
+            
+            # 添加刻度文本 - 移到右侧
+            fig.add_annotation(
+                x=self.x_position + self.width + self.tick_length + self.tick_text_offset,  # 位于刻度线右侧
+                y=y_pos,
+                text=str(value),
+                showarrow=False,
+                xanchor="left",  # 文本左对齐
+                yanchor="middle",
+                font=dict(size=self.font_size, color=self.font_color)
+            )
+        
+        # 添加颜色条标题
+        fig.add_annotation(
+            x=self.x_position + self.width / 2,
+            y=self.y_position[1] + self.title_offset,
+            text=self.title,
+            showarrow=False,
+            xanchor="center",
+            yanchor="bottom",
+            font=dict(size=self.title_font_size, color=self.title_font_color)
+        )
 
 class PlotlyContourChart:
     """Python版的等值线图类，模仿plotlyContour.js的功能"""
@@ -22,6 +360,7 @@ class PlotlyContourChart:
             "displayModeBar": False,
             "scrollZoom": True
         }
+        self.custom_colorbar = None  # 存储自定义颜色条
         
     def init(self, options=None):
         """初始化等值线图
@@ -497,8 +836,36 @@ class PlotlyContourChart:
             print("图表未初始化，无法显示")
             return
         
-        self.fig.show()
+        # 添加自定义颜色条（如果存在）
+        if self.custom_colorbar:
+            self.custom_colorbar.add_to_figure(self.fig)
+            
+        self.fig.show(config=self.config)
     
+    def addCustomColorBar(self, color_stops, **kwargs):
+        """添加自定义颜色条
+        
+        Args:
+            color_stops: 颜色停止点列表，格式为 [[值1, '颜色1'], [值2, '颜色2'], ...]
+            **kwargs: 其他传递给CustomColorBar的参数
+            
+        Returns:
+            CustomColorBar: 创建的自定义颜色条对象
+        """
+        if not self.fig:
+            print("图表未初始化，无法添加自定义颜色条")
+            return None
+            
+        # 创建自定义颜色条对象
+        self.custom_colorbar = CustomColorBar(color_stops, **kwargs)
+        
+        # 将颜色条添加到图表
+        self.custom_colorbar.add_to_figure(self.fig)
+        
+        print(f"已添加自定义颜色条，包含 {len(color_stops)} 个颜色停止点")
+        
+        return self.custom_colorbar
+        
     def save_figure(self, filename, format="png"):
         """保存图表为图片
         
@@ -510,6 +877,10 @@ class PlotlyContourChart:
             print("图表未初始化，无法保存")
             return False
         
+        # 添加自定义颜色条（如果存在）
+        if self.custom_colorbar:
+            self.custom_colorbar.add_to_figure(self.fig)
+            
         try:
             self.fig.write_image(
                 filename,
@@ -541,6 +912,10 @@ class PlotlyContourChart:
             print("图表未初始化，无法保存")
             return False
         
+        # 添加自定义颜色条（如果存在）
+        if self.custom_colorbar:
+            self.custom_colorbar.add_to_figure(self.fig)
+            
         try:
             self.fig.write_html(filename)
             print(f"成功保存图表到 {filename}")
